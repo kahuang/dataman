@@ -274,6 +274,8 @@ func fieldToSchema(field *metadata.Field) (string, error) {
 	case metadata.String:
 		// TODO: have options to set limits? Or always use text fields?
 		fieldStr += "\"" + field.Name + "\" character varying(255)"
+	case metadata.Int:
+		fieldStr += "\"" + field.Name + "\" int"
 	default:
 		return "", fmt.Errorf("Unknown field type: %v", field.Type)
 	}
