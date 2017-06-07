@@ -579,7 +579,7 @@ func (m *MetadataStore) getFieldByID(meta *metadata.Meta, id int64) (*storagenod
 			ID:             collectionFieldRecord["_id"].(int64),
 			CollectionID:   collectionFieldRecord["collection_id"].(int64),
 			Name:           collectionFieldRecord["name"].(string),
-			Type:           storagenodemetadata.FieldType(collectionFieldRecord["field_type"].(string)),
+			Type:           storagenodemetadata.DatamanFieldType(collectionFieldRecord["field_type"].(string)),
 			ProvisionState: storagenodemetadata.ProvisionState(collectionFieldRecord["provision_state"].(int64)),
 		}
 		if fieldTypeArgs, ok := collectionFieldRecord["field_type_args"]; ok && fieldTypeArgs != nil {
