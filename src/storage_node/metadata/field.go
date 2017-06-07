@@ -16,21 +16,6 @@ func SetFieldTreeState(field *Field, state ProvisionState) {
 	}
 }
 
-type DatamanFieldType string
-
-// TODO: re-work to have multiple mappings
-// The intention here is to have a mapping of client -> dataman -> datastore
-// this should be our listing of dataman FieldTypes, which have limits and validation methods
-// which we then leave up to the datasource to store.
-const (
-	Document DatamanFieldType = "document"
-	String                    = "string"
-	Text                      = "text"
-	Int                       = "int"
-	Bool                      = "bool"
-	DateTime                  = "datetime"
-)
-
 type Field struct {
 	ID int64 `json:"_id,omitempty"`
 	// TODO: remove? Need a method to link them
@@ -93,12 +78,6 @@ func (f *Field) Normalize(val interface{}) (interface{}, error) {
 		}
 		if float64(len(s)) > f.TypeArgs["size"].(float64) {
 			return nil, fmt.Errorf("String too long")
-		}
-		return s, nil
-	case Text:
-		s, ok := val.(string)
-		if !ok {
-			return nil, fmt.Errorf("Not a string")
 		}
 		return s, nil
 	case Int:

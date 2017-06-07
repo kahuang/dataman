@@ -106,25 +106,6 @@ func TestFieldValidation_String(t *testing.T) {
 	testCase.Test(t)
 }
 
-func TestFieldValidation_Text(t *testing.T) {
-	testCase := &fieldValidationCase{
-		field: &Field{
-			Type: Text,
-		},
-		goodValues: []interface{}{
-			"foo",
-			"f",
-			"AstringThatisWayTooLong", // String which is too long
-			"",
-		},
-		badValues: []interface{}{
-			1,   // a number
-			nil, // nil
-		},
-	}
-	testCase.Test(t)
-}
-
 func TestFieldValidation_Int(t *testing.T) {
 	testCase := &fieldValidationCase{
 		field: &Field{

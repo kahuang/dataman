@@ -11,9 +11,9 @@ import "fmt"
 
 // TODO: move down?
 type ConstraintArg struct {
-	Name string `json:"name"`
+	Name             string `json:"name"`
 	DatamanFieldType DatamanFieldType
-	Value interface{} `json:"value"`
+	Value            interface{} `json:"value"`
 }
 
 // TODO: rename to ConstraintFunc / ConstraintName and use "Constraint" as the wrapper struct (for json mapping)
@@ -40,7 +40,7 @@ func (c Constraint) GetEnforceFunc(args map[string]ConstraintArg) (func(v interf
 			return func(v interface{}) bool {
 				//return v < valTyped
 				return true
-			}
+			}, nil
 		default:
 			return nil, fmt.Errorf("Unsupported value type %v", valTyped)
 		}
@@ -52,13 +52,9 @@ func (c Constraint) GetEnforceFunc(args map[string]ConstraintArg) (func(v interf
 }
 
 type ConstraintInstance struct {
-	ConstraintID int64                  `json:"constraint_id"`
-	Constraint   Constraint             `json:"-"`
+	ConstraintID int64                    `json:"constraint_id"`
+	Constraint   Constraint               `json:"-"`
 	Args         map[string]ConstraintArg `json:"args,omitempty"`
-}
-
-func (c *ConstraintInstance) Enforce(args map[string]interface{}, v interface{}) (bool, error) {
-	return c.Constraint.Enforce(args, v)
 }
 
 type DatasourceFieldType struct {

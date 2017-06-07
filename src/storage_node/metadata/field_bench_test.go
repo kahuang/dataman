@@ -32,9 +32,6 @@ func init() {
 	}
 
 	benchFields = map[string]*Field{
-		"text": &Field{
-			Type: Text,
-		},
 		"int": &Field{
 			Type: Int,
 		},
@@ -81,9 +78,7 @@ func BenchmarkFieldValidation(b *testing.B) {
 				b.Run(name, func(b *testing.B) { bench(b, field) })
 			}
 		})
-
 	}
-
 }
 
 func benchmark_Bool(b *testing.B, field *Field) {
