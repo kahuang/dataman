@@ -7,8 +7,13 @@ var InternalFields map[string]*Field
 func init() {
 	tmpFields := []*Field{
 		&Field{
-			Name:    "_id",
-			Type:    Int,
+			Name: "_id",
+			FieldType: &FieldType{
+				Name: "_id",
+				DatamanFieldType: &DatamanFieldType{
+					Name: Int,
+				},
+			},
 			NotNull: true,
 		},
 

@@ -16,6 +16,11 @@ func NewMeta() *Meta {
 		Collections:        make(map[int64]*Collection),
 
 		Databases: make(map[string]*Database),
+
+		// TODO: finish
+		DatamanFieldTypes: make(map[int64]*storagenodemetadata.DatamanFieldType),
+		Constraints:       make(map[int64]*storagenodemetadata.Constraint),
+		FieldTypes:        make(map[int64]*storagenodemetadata.FieldType),
 	}
 }
 
@@ -34,6 +39,12 @@ type Meta struct {
 	Collections     map[int64]*Collection                `json:"-"`
 
 	Databases map[string]*Database `json:"databases"`
+
+	// TODO: finish
+	// TODO: filter code-based-types to what we have in *this* version (we don't want to serve ones we don't know about)
+	DatamanFieldTypes map[int64]*storagenodemetadata.DatamanFieldType `json:"dataman_field_types"`
+	Constraints       map[int64]*storagenodemetadata.Constraint       `json:"constraints"`
+	FieldTypes        map[int64]*storagenodemetadata.FieldType        `json:"field_types"`
 }
 
 // TODO: more than just names?
@@ -58,6 +69,18 @@ func (m *Meta) UnmarshalJSON(data []byte) error {
 
 	// TODO:
 	// Add linking things expect
+
+	for _, constraint := range m.Constraints {
+		if constraint.Args != nil {
+			for _, constraintArg := range constraint.Args {
+				constraintArg.DatamanFieldType = m.DatamanFieldTypes[constraintArg.DatamanFieldTypeID]
+			}
+		}
+	}
+
+	for _, fieldType := range m.FieldTypes {
+		fieldType.DatamanFieldType = m.DatamanFieldTypes[fieldType.DatamanFieldTypeID]
+	}
 
 	if m.DatasourceInstance == nil {
 		m.DatasourceInstance = make(map[int64]*DatasourceInstance)

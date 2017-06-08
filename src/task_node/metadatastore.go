@@ -55,8 +55,6 @@ func (m *MetadataStore) GetMeta() (*metadata.Meta, error) {
 		return nil, fmt.Errorf("Error in getting storageNodeResult: %v", storageNodeResult.Error)
 	}
 
-	meta.Nodes = make(map[int64]*metadata.StorageNode)
-
 	// for each database load the database + collections etc.
 	for _, storageNodeRecord := range storageNodeResult.Return {
 		meta.Nodes[storageNodeRecord["_id"].(int64)] = &metadata.StorageNode{
@@ -71,6 +69,149 @@ func (m *MetadataStore) GetMeta() (*metadata.Meta, error) {
 
 			ProvisionState: metadata.ProvisionState(storageNodeRecord["provision_state"].(int64)),
 		}
+	}
+
+	// TODO: load all the datasource field types
+
+	// Load all the dataman_field_types
+	datamanFieldTypeResult := m.Store.Filter(map[string]interface{}{
+		"db":             "dataman_router",
+		"shard_instance": "public",
+		"collection":     "dataman_field_type",
+	})
+	// TODO: better error handle
+	if datamanFieldTypeResult.Error != "" {
+		return nil, fmt.Errorf("Error in getting datamanFieldTypeResult: %v", datamanFieldTypeResult.Error)
+	}
+
+	for _, datamanFieldTypeRecord := range datamanFieldTypeResult.Return {
+		meta.DatamanFieldTypes[datamanFieldTypeRecord["_id"].(int64)] = &storagenodemetadata.DatamanFieldType{
+			ID:   datamanFieldTypeRecord["_id"].(int64),
+			Name: storagenodemetadata.DatamanType(datamanFieldTypeRecord["name"].(string)),
+		}
+	}
+
+	// Load all the constraints
+	constraintResult := m.Store.Filter(map[string]interface{}{
+		"db":             "dataman_router",
+		"shard_instance": "public",
+		"collection":     "constraint",
+	})
+	// TODO: better error handle
+	if constraintResult.Error != "" {
+		return nil, fmt.Errorf("Error in getting constraintResult: %v", constraintResult.Error)
+	}
+
+	// for each database load the database + collections etc.
+	for _, constraintRecord := range constraintResult.Return {
+		meta.Constraints[constraintRecord["_id"].(int64)] = &storagenodemetadata.Constraint{
+			ID:   constraintRecord["_id"].(int64),
+			Name: storagenodemetadata.ConstraintName(constraintRecord["name"].(string)),
+		}
+
+		// Load any args
+		constraintArgResult := m.Store.Filter(map[string]interface{}{
+			"db":             "dataman_router",
+			"shard_instance": "public",
+			"collection":     "constraint_arg",
+		})
+		// TODO: better error handle
+		if constraintArgResult.Error != "" {
+			return nil, fmt.Errorf("Error in getting constraintArgResult: %v", constraintArgResult.Error)
+		}
+
+		constraintArgs := make(map[string]storagenodemetadata.ConstraintArg)
+		for _, constraintArgRecord := range constraintArgResult.Return {
+			constraintArg := storagenodemetadata.ConstraintArg{
+				ID:                 constraintArgRecord["_id"].(int64),
+				Name:               constraintArgRecord["name"].(string),
+				DatamanFieldTypeID: constraintArgRecord["dataman_field_type_id"].(int64),
+				DatamanFieldType:   meta.DatamanFieldTypes[constraintArgRecord["dataman_field_type_id"].(int64)],
+			}
+			constraintArgs[constraintArg.Name] = constraintArg
+		}
+		if len(constraintArgs) > 0 {
+			meta.Constraints[constraintRecord["_id"].(int64)].Args = constraintArgs
+		}
+	}
+
+	// Load all the field_types
+	fieldTypeResult := m.Store.Filter(map[string]interface{}{
+		"db":             "dataman_router",
+		"shard_instance": "public",
+		"collection":     "field_type",
+	})
+	// TODO: better error handle
+	if fieldTypeResult.Error != "" {
+		return nil, fmt.Errorf("Error in getting fieldTypeResult: %v", fieldTypeResult.Error)
+	}
+
+	// for each database load the database + collections etc.
+	for _, fieldTypeRecord := range fieldTypeResult.Return {
+		fieldType := &storagenodemetadata.FieldType{
+			ID:                 fieldTypeRecord["_id"].(int64),
+			Name:               fieldTypeRecord["name"].(string),
+			DatamanFieldTypeID: fieldTypeRecord["dataman_field_type_id"].(int64),
+			DatamanFieldType:   meta.DatamanFieldTypes[fieldTypeRecord["dataman_field_type_id"].(int64)],
+		}
+
+		// Load constraints (if we have them)
+		fieldTypeConstraintResult := m.Store.Filter(map[string]interface{}{
+			"db":             "dataman_router",
+			"shard_instance": "public",
+			"collection":     "field_type_constraint",
+			"filter": map[string]interface{}{
+				"field_type_id": fieldType.ID,
+			},
+		})
+		// TODO: better error handle
+		if fieldTypeConstraintResult.Error != "" {
+			return nil, fmt.Errorf("Error in getting fieldTypeConstraintResult: %v", fieldTypeConstraintResult.Error)
+		}
+
+		if len(fieldTypeConstraintResult.Return) > 0 {
+			fieldType.Constraints = make([]*storagenodemetadata.FieldTypeConstraint, len(fieldTypeConstraintResult.Return))
+			// for each database load the database + collections etc.
+			for i, fieldTypeConstraintRecord := range fieldTypeConstraintResult.Return {
+				fieldTypeConstraint := &storagenodemetadata.FieldTypeConstraint{
+					ID:           fieldTypeConstraintRecord["_id"].(int64),
+					ConstraintID: fieldTypeConstraintRecord["constraint_id"].(int64),
+					Constraint:   meta.Constraints[fieldTypeConstraintRecord["constraint_id"].(int64)],
+				}
+
+				// Get args (if we have them)
+				fieldTypeConstraintArgResult := m.Store.Filter(map[string]interface{}{
+					"db":             "dataman_router",
+					"shard_instance": "public",
+					"collection":     "field_type_constraint_arg",
+					"filter": map[string]interface{}{
+						"field_type_constraint_id": fieldTypeConstraint.ID,
+					},
+				})
+				// TODO: better error handle
+				if fieldTypeConstraintArgResult.Error != "" {
+					return nil, fmt.Errorf("Error in getting fieldTypeConstraintArgResult: %v", fieldTypeConstraintArgResult.Error)
+				}
+
+				if len(fieldTypeConstraintArgResult.Return) > 0 {
+					fieldTypeConstraint.Args = make(map[int64]interface{})
+					// for each database load the database + collections etc.
+					for _, fieldTypeConstraintArgRecord := range fieldTypeConstraintArgResult.Return {
+						fieldTypeConstraint.Args[fieldTypeConstraintArgRecord["constraint_arg_id"].(int64)] = fieldTypeConstraintArgRecord["value"].(string)
+					}
+				}
+
+				fieldTypeConstraint.ConstraintFunc, err = fieldTypeConstraint.Constraint.GetConstraintFunc(fieldTypeConstraint.Args)
+				if err != nil {
+					// TODO: better error message
+					return nil, err
+				}
+
+				fieldType.Constraints[i] = fieldTypeConstraint
+			}
+		}
+
+		meta.FieldTypes[fieldTypeRecord["_id"].(int64)] = fieldType
 	}
 
 	// Load all of the datasource_instances
@@ -579,7 +720,7 @@ func (m *MetadataStore) getFieldByID(meta *metadata.Meta, id int64) (*storagenod
 			ID:             collectionFieldRecord["_id"].(int64),
 			CollectionID:   collectionFieldRecord["collection_id"].(int64),
 			Name:           collectionFieldRecord["name"].(string),
-			Type:           storagenodemetadata.DatamanFieldType(collectionFieldRecord["field_type"].(string)),
+			Type:           storagenodemetadata.DatamanType(collectionFieldRecord["field_type"].(string)),
 			ProvisionState: storagenodemetadata.ProvisionState(collectionFieldRecord["provision_state"].(int64)),
 		}
 		if fieldTypeArgs, ok := collectionFieldRecord["field_type_args"]; ok && fieldTypeArgs != nil {

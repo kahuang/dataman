@@ -5,16 +5,24 @@ import (
 	"strconv"
 )
 
-// TODO: rename to SchemaMan Type?
-type DatamanFieldType string
+type DatamanFieldType struct {
+	ID   int64       `json:"_id"`
+	Name DatamanType `json:"name"`
 
-// DatamanFieldType is a method for describing the golang type in schema
+	// TODO:
+	//DatasourceFieldTypeIDs []int64 `json:"datasource_field_type_ids"`
+}
+
+// TODO: rename to SchemaMan Type?
+type DatamanType string
+
+// DatamanType is a method for describing the golang type in schema
 // This allows us to treat everything as interfaces{} in most of the code yet
 // still be in a strongly typed language
 
 const (
-	Document DatamanFieldType = "document"
-	String                    = "string"
+	Document DatamanType = "document"
+	String               = "string"
 	// We should support converting anything to an int that doesn't lose data
 	Int = "int"
 	// TODO: int64
@@ -24,8 +32,8 @@ const (
 	DateTime = "datetime"
 )
 
-// Validate a field
-func (f DatamanFieldType) Normalize(val interface{}) (interface{}, error) {
+// Normalize the given interface into what we want/expect
+func (f DatamanType) Normalize(val interface{}) (interface{}, error) {
 	switch f {
 	case Document:
 		valTyped, ok := val.(map[string]interface{})

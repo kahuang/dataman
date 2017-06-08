@@ -209,7 +209,7 @@ const schemaJson string = `
                 },
                 "data_json": {
                   "name": "data_json",
-                  "type": "text",
+                  "type": "string",
                   "provision_state": 0
                 },
                 "name": {
@@ -437,6 +437,91 @@ const schemaJson string = `
               },
               "provision_state": 0
             },
+            "constraint": {
+              "name": "constraint",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "info": {
+                  "name": "info",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "provision_state": 0
+                },
+                "name": {
+                  "name": "name",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "constraint_arg": {
+              "name": "constraint_arg",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "constraint_id": {
+                  "name": "constraint_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "dataman_field_type_id": {
+                  "name": "dataman_field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "name": {
+                  "name": "name",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "constraint_dataman_field_type": {
+              "name": "constraint_dataman_field_type",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "constraint_id": {
+                  "name": "constraint_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "dataman_field_type_id": {
+                  "name": "dataman_field_type_id",
+                  "type": "int",
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
             "database": {
               "name": "database",
               "fields": {
@@ -658,6 +743,59 @@ const schemaJson string = `
               },
               "provision_state": 0
             },
+            "dataman_field_type": {
+              "name": "dataman_field_type",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "name": {
+                  "name": "name",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "dataman_field_type_datasource_field_type": {
+              "name": "dataman_field_type_datasource_field_type",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "dataman_field_type_id": {
+                  "name": "dataman_field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "relation": {
+                    "collection": "dataman_field_type",
+                    "field": "_id"
+                  },
+                  "provision_state": 0
+                },
+                "datasource_field_type_id": {
+                  "name": "datasource_field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "relation": {
+                    "collection": "datasource_field_type",
+                    "field": "_id"
+                  },
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
             "datasource": {
               "name": "datasource",
               "fields": {
@@ -683,6 +821,86 @@ const schemaJson string = `
                     "name"
                   ],
                   "unique": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "datasource_field_type": {
+              "name": "datasource_field_type",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "datasource_id": {
+                  "name": "datasource_id",
+                  "type": "int",
+                  "not_null": true,
+                  "relation": {
+                    "collection": "datasource",
+                    "field": "_id"
+                  },
+                  "provision_state": 0
+                },
+                "info": {
+                  "name": "info",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "provision_state": 0
+                },
+                "name": {
+                  "name": "name",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "datasource_field_type_arg": {
+              "name": "datasource_field_type_arg",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "dataman_field_type_id": {
+                  "name": "dataman_field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "relation": {
+                    "collection": "dataman_field_type",
+                    "field": "_id"
+                  },
+                  "provision_state": 0
+                },
+                "datasource_field_type_id": {
+                  "name": "datasource_field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "relation": {
+                    "collection": "datasource_field_type",
+                    "field": "_id"
+                  },
+                  "provision_state": 0
+                },
+                "name": {
+                  "name": "name",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
                   "provision_state": 0
                 }
               },
@@ -969,6 +1187,175 @@ const schemaJson string = `
                     "datasource_instance_id"
                   ],
                   "unique": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "field_type": {
+              "name": "field_type",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "dataman_field_type": {
+                  "name": "dataman_field_type",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "provision_state": 0
+                },
+                "dataman_field_type_id": {
+                  "name": "dataman_field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "name": {
+                  "name": "name",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "indexes": {
+                "field_type_name_idx": {
+                  "name": "field_type_name_idx",
+                  "fields": [
+                    "name"
+                  ],
+                  "unique": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "field_type_constraint": {
+              "name": "field_type_constraint",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "constraint_id": {
+                  "name": "constraint_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "field_type_id": {
+                  "name": "field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "field_type_constraint_arg": {
+              "name": "field_type_constraint_arg",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "constraint_arg_id": {
+                  "name": "constraint_arg_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "field_type_constraint_id": {
+                  "name": "field_type_constraint_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "value": {
+                  "name": "value",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "field_type_datasource_field_type": {
+              "name": "field_type_datasource_field_type",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "datasource_field_type_id": {
+                  "name": "datasource_field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "field_type_id": {
+                  "name": "field_type_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                }
+              },
+              "indexes": {
+                "field_type_datasource_field_type_field_type_id_idx": {
+                  "name": "field_type_datasource_field_type_field_type_id_idx",
+                  "fields": [
+                    "field_type_id",
+                    "datasource_field_type_id"
+                  ],
+                  "unique": true,
+                  "provision_state": 0
+                }
+              },
+              "provision_state": 0
+            },
+            "field_type_datasource_field_type_arg": {
+              "name": "field_type_datasource_field_type_arg",
+              "fields": {
+                "_id": {
+                  "name": "_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "datasource_field_type_arg_id": {
+                  "name": "datasource_field_type_arg_id",
+                  "type": "int",
+                  "not_null": true,
+                  "provision_state": 0
+                },
+                "field_type_datasource_field_type_id": {
+                  "name": "field_type_datasource_field_type_id",
+                  "type": "int",
+                  "provision_state": 0
+                },
+                "value": {
+                  "name": "value",
+                  "type": "string",
+                  "type_args": {
+                    "size": 255
+                  },
+                  "not_null": true,
                   "provision_state": 0
                 }
               },

@@ -10,10 +10,11 @@ import (
 	"github.com/jacksontj/dataman/src/storage_node/metadata"
 )
 
+// TODO: replace with datasource_field_type
 func fieldToSchema(field *metadata.Field) (string, error) {
 	fieldStr := ""
 
-	switch field.Type {
+	switch field.FieldType.DatamanFieldType.Name {
 	case metadata.Document:
 		fieldStr += "\"" + field.Name + "\" jsonb"
 	case metadata.String:
@@ -41,7 +42,7 @@ func fieldToSchema(field *metadata.Field) (string, error) {
 	case metadata.DateTime:
 		fieldStr += "\"" + field.Name + "\" timestamp without time zone"
 	default:
-		return "", fmt.Errorf("Unknown field type: %v", field.Type)
+		return "", fmt.Errorf("Unknown field type: %v", field.FieldType.DatamanFieldType.Name)
 	}
 
 	if field.NotNull {
@@ -304,63 +305,69 @@ WHERE table_schema = ($1) AND table_name = ($2)
 `
 
 func (s *Storage) ListCollectionField(dbname, shardinstance, collectionname string) []*metadata.Field {
-	// Get the fields for the collection
-	fieldRecords, err := DoQuery(s.getDB(dbname), listColumnTemplate, shardinstance, collectionname)
-	if err != nil {
-		logrus.Fatalf("Unable to get fields for db=%s table=%s: %v", dbname, collectionname, err)
-	}
-
-	fields := make([]*metadata.Field, len(fieldRecords))
-	for i, fieldEntry := range fieldRecords {
-		var fieldType metadata.DatamanFieldType
-		fieldTypeArgs := make(map[string]interface{})
-		switch fieldEntry["data_type"] {
-		case "integer":
-			fieldType = metadata.Int
-		case "character varying":
-			fieldType = metadata.String
-		// TODO: do we want to do this based on size?
-		case "smallint":
-			fieldType = metadata.Int
-		case "jsonb":
-			fieldType = metadata.Document
-		case "boolean":
-			fieldType = metadata.Bool
-		case "text":
-			fieldType = metadata.String
-		case "timestamp without time zone":
-			fieldType = metadata.DateTime
-		default:
-			logrus.Fatalf("Unknown postgres data_type %s in %s.%s %v", fieldEntry["data_type"], dbname, collectionname, fieldEntry)
-		}
-
-		if maxSize, ok := fieldEntry["character_maximum_length"]; ok && maxSize != nil {
-			fieldTypeArgs["size"] = maxSize
-		}
-
-		field := &metadata.Field{
-			Name:     fieldEntry["column_name"].(string),
-			Type:     fieldType,
-			TypeArgs: fieldTypeArgs,
-			NotNull:  fieldEntry["is_nullable"].(string) == "NO",
-		}
-
-		queryTemplate := listRelationQuery + " AND x.column_name = '%s'"
-
-		relationEntries, err := DoQuery(s.getDB(dbname), fmt.Sprintf(queryTemplate, shardinstance, collectionname, field.Name))
+	// TODO: fix
+	return nil
+	/*
+		// Get the fields for the collection
+		fieldRecords, err := DoQuery(s.getDB(dbname), listColumnTemplate, shardinstance, collectionname)
 		if err != nil {
-			logrus.Fatalf("Unable to get relation %s from %s: %v", field.Name, dbname, err)
+			logrus.Fatalf("Unable to get fields for db=%s table=%s: %v", dbname, collectionname, err)
 		}
-		if len(relationEntries) > 0 {
-			relationEntry := relationEntries[0]
-			field.Relation = &metadata.FieldRelation{
-				Collection: relationEntry["foreign_table_name"].(string),
-				Field:      relationEntry["foreign_column_name"].(string),
+
+		fields := make([]*metadata.Field, len(fieldRecords))
+		for i, fieldEntry := range fieldRecords {
+			var fieldType metadata.FieldType
+			fieldTypeArgs := make(map[string]interface{})
+			// TODO: need to have some internal registry of the FieldTypes (at least internal field_types)
+			// so we can read the schema out to the user
+			switch fieldEntry["data_type"] {
+			case "integer":
+				fieldType = metadata.Int
+			case "character varying":
+				fieldType = metadata.String
+			// TODO: do we want to do this based on size?
+			case "smallint":
+				fieldType = metadata.Int
+			case "jsonb":
+				fieldType = metadata.Document
+			case "boolean":
+				fieldType = metadata.Bool
+			case "text":
+				fieldType = metadata.String
+			case "timestamp without time zone":
+				fieldType = metadata.DateTime
+			default:
+				logrus.Fatalf("Unknown postgres data_type %s in %s.%s %v", fieldEntry["data_type"], dbname, collectionname, fieldEntry)
 			}
+
+			if maxSize, ok := fieldEntry["character_maximum_length"]; ok && maxSize != nil {
+				fieldTypeArgs["size"] = maxSize
+			}
+
+			field := &metadata.Field{
+				Name:     fieldEntry["column_name"].(string),
+				Type:     fieldType,
+				TypeArgs: fieldTypeArgs,
+				NotNull:  fieldEntry["is_nullable"].(string) == "NO",
+			}
+
+			queryTemplate := listRelationQuery + " AND x.column_name = '%s'"
+
+			relationEntries, err := DoQuery(s.getDB(dbname), fmt.Sprintf(queryTemplate, shardinstance, collectionname, field.Name))
+			if err != nil {
+				logrus.Fatalf("Unable to get relation %s from %s: %v", field.Name, dbname, err)
+			}
+			if len(relationEntries) > 0 {
+				relationEntry := relationEntries[0]
+				field.Relation = &metadata.FieldRelation{
+					Collection: relationEntry["foreign_table_name"].(string),
+					Field:      relationEntry["foreign_column_name"].(string),
+				}
+			}
+			fields[i] = field
 		}
-		fields[i] = field
-	}
-	return fields
+		return fields
+	*/
 }
 
 // TODO: better
@@ -539,7 +546,7 @@ func (s *Storage) AddCollectionIndex(db *metadata.Database, shardInstance *metad
 			if !ok {
 				return fmt.Errorf("Index %s on unknown field %s", index.Name, fieldName)
 			}
-			if field.Type != metadata.Document {
+			if field.FieldType.DatamanFieldType.Name != metadata.Document {
 				return fmt.Errorf("Nested index %s on a non-document field %s", index.Name, fieldName)
 			}
 			indexAddQuery += "(" + fieldParts[0]

@@ -150,7 +150,7 @@ func (s *Storage) Insert(args query.QueryArgs) *query.Result {
 		}
 
 		fieldHeaders = append(fieldHeaders, "\""+fieldName+"\"")
-		switch field.Type {
+		switch field.FieldType.DatamanFieldType.Name {
 		case metadata.Document:
 			fieldJson, err := json.Marshal(fieldValue)
 			if err != nil {
@@ -206,7 +206,7 @@ func (s *Storage) Update(args query.QueryArgs) *query.Result {
 		}
 
 		fieldHeaders = append(fieldHeaders, "\""+fieldName+"\"")
-		switch field.Type {
+		switch field.FieldType.DatamanFieldType.Name {
 		case metadata.Document:
 			fieldJson, err := json.Marshal(fieldValue)
 			if err != nil {
@@ -247,7 +247,7 @@ func (s *Storage) Update(args query.QueryArgs) *query.Result {
 		}
 
 		filterHeaders = append(filterHeaders, "\""+filterName+"\"")
-		switch field.Type {
+		switch field.FieldType.DatamanFieldType.Name {
 		case metadata.Document:
 			fieldJson, err := json.Marshal(filterValue)
 			if err != nil {
@@ -320,7 +320,7 @@ func (s *Storage) Delete(args query.QueryArgs) *query.Result {
 			}
 
 			filterHeaders = append(filterHeaders, "\""+filterName+"\"")
-			switch field.Type {
+			switch field.FieldType.DatamanFieldType.Name {
 			case metadata.Document:
 				fieldJson, err := json.Marshal(filterValue)
 				if err != nil {
@@ -391,7 +391,7 @@ func (s *Storage) Filter(args query.QueryArgs) *query.Result {
 				return result
 			}
 
-			switch field.Type {
+			switch field.FieldType.DatamanFieldType.Name {
 			case metadata.Document:
 				// TODO: recurse and add many
 				for innerName, innerValue := range fieldValue.(map[string]interface{}) {
@@ -432,7 +432,7 @@ func (s *Storage) normalizeResult(args query.QueryArgs, result *query.Result) {
 	for _, row := range result.Return {
 		for k, v := range row {
 			if field, ok := collection.Fields[k]; ok && v != nil {
-				switch field.Type {
+				switch field.FieldType.DatamanFieldType.Name {
 				case metadata.Document:
 					var tmp map[string]interface{}
 					json.Unmarshal(v.([]byte), &tmp)
