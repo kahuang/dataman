@@ -9,6 +9,17 @@
 				        "not_null": true,
 					    "field_type": "_datetime",
 					    "name": "created"
+				    },
+                    "created_data": {
+					    "subfields": {
+						    "data_created": {
+							    "not_null": true,
+								"field_type": "_datetime",
+							    "name": "data_created"
+						    }
+					    },
+					    "field_type": "_document",
+					    "name": "created_data"
 				    }
 			    },
 			    "keyspaces": [{

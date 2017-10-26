@@ -4,7 +4,10 @@
         "db": "test1",
         "collection": "timeseries",
         "record": {
-            "created": 1504906926
+            "created": 1504906926,
+            "created_data": {
+                "data_created": 1504906926
+            }
         }
     }
 }
