@@ -222,7 +222,7 @@ func (s *DatasourceInstance) HandleQuery(ctx context.Context, q *query.Query) *q
 	start := time.Now()
 	defer func() {
 		end := time.Now()
-		s.m.QueryTime.WithValues(q.Args.DB, q.Args.Collection, string(q.Type)).Observe(float64(end.Sub(start)))
+		s.m.QueryTime.WithValues(q.Args.DB, q.Args.ShardInstance, q.Args.Collection, string(q.Type)).Observe(float64(end.Sub(start)))
 	}()
 
 	var result *query.Result
@@ -392,7 +392,7 @@ func (s *DatasourceInstance) HandleStreamQuery(ctx context.Context, q *query.Que
 	start := time.Now()
 	defer func() {
 		end := time.Now()
-		s.m.QueryTime.WithValues(q.Args.DB, q.Args.Collection, string(q.Type)).Observe(float64(end.Sub(start)))
+		s.m.QueryTime.WithValues(q.Args.DB, q.Args.ShardInstance, q.Args.Collection, string(q.Type)).Observe(float64(end.Sub(start)))
 	}()
 
 	var result *query.ResultStream

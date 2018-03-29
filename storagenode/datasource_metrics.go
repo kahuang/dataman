@@ -27,7 +27,7 @@ func NewDatasourceInstanceMetrics(r metrics.Registry) DatasourceInstanceMetrics 
 	m.QueryTime, _ = metrics.NewCustomObserveArray(
 		metrics.Metric{Name: "handle_query"},
 		metrics.NewTDigestCreator([]float64{0.5, 0.9, 0.99}),
-		[]string{"db", "collection", "api"},
+		[]string{"db", "shard_instance", "collection", "api"},
 	)
 	// TODO: check error
 	r.Register(m.QueryTime)
