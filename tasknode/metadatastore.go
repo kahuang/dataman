@@ -2171,6 +2171,9 @@ func (m *MetadataStore) EnsureExistsCollectionKeyspacePartition(ctx context.Cont
 		return err
 	}
 
+	// TODO: this is bad, remove it
+	var index *int
+
 	if existingDB, ok := meta.Databases[db.Name]; ok {
 		db.ID = existingDB.ID
 		if existingCollection, ok := existingDB.Collections[collection.Name]; ok {
@@ -2179,9 +2182,13 @@ func (m *MetadataStore) EnsureExistsCollectionKeyspacePartition(ctx context.Cont
 			if collection.Keyspaces != nil && len(collection.Keyspaces) > 0 {
 				collectionKeyspace.ID = collection.Keyspaces[0].ID
 
-				// TODO: change once we support more than one parition
-				if collection.Keyspaces[0].Partitions != nil && len(collection.Keyspaces[0].Partitions) > 0 {
-					collectionKeyspacePartition.ID = collection.Keyspaces[0].Partitions[0].ID
+				for i, partition := range collection.Keyspaces[0].Partitions {
+					// TODO: better equal method
+					if partition.StartId == collectionKeyspacePartition.StartId && partition.EndId == collectionKeyspacePartition.EndId {
+						collectionKeyspacePartition.ID = partition.ID
+						index = &i
+						break
+					}
 				}
 			}
 
@@ -2248,8 +2255,10 @@ func (m *MetadataStore) EnsureExistsCollectionKeyspacePartition(ctx context.Cont
 	}
 
 	collectionKeyspacePartition.ID = collectionKeyspacePartitionResult.Return[0]["_id"].(int64)
-	// TODO: remove, need to key off something eventually, for now we only support 1
-	if len(collectionKeyspace.Partitions) == 0 {
+	if index != nil {
+		collectionKeyspace.Partitions[*index] = collectionKeyspacePartition
+	} else {
+		// TODO: sort
 		collectionKeyspace.Partitions = append(collectionKeyspace.Partitions, collectionKeyspacePartition)
 	}
 

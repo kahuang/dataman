@@ -341,8 +341,6 @@ func (s *RouterNode) handleRead(ctx context.Context, meta *metadata.Meta, q *que
 	databaseDatastore := database.DatastoreSet.Read[0]
 	// TODO: support multiple keyspaces
 	keyspace := collection.Keyspaces[0]
-	// TODO: support multiple partitions
-	partition := keyspace.Partitions[0]
 
 	// TODO: better name
 	var keyspacePartitionAddr *uint64
@@ -439,8 +437,12 @@ func (s *RouterNode) handleRead(ctx context.Context, meta *metadata.Meta, q *que
 
 	var vshards []*metadata.DatastoreVShardInstance
 	if keyspacePartitionAddr == nil {
-		vshards = partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards
+		for _, partition := range keyspace.Partitions {
+			vshards = append(vshards, partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards...)
+		}
 	} else {
+		partition := keyspace.GetKeyspacePartition(*keyspacePartitionAddr)
+
 		vshardNum := partition.ShardFunc(*keyspacePartitionAddr, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards))
 		vshards = []*metadata.DatastoreVShardInstance{partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards[vshardNum-1]}
 	}
@@ -519,8 +521,9 @@ func (s *RouterNode) handleWrite(ctx context.Context, meta *metadata.Meta, q *qu
 	databaseDatastore := database.DatastoreSet.Write
 	// TODO: support multiple partitions
 	keyspace := collection.Keyspaces[0]
-	// TODO: support multiple partitions
-	partition := keyspace.Partitions[0]
+
+	// TODO: better name
+	var keyspacePartitionAddr *uint64
 
 	// TODO: eventually we'll want to be more sophisticated and do this same thing if there
 	// are a set of id's we can derive from the original query, so we can do a limited
@@ -564,25 +567,7 @@ func (s *RouterNode) handleWrite(ctx context.Context, meta *metadata.Meta, q *qu
 			// TODO: wrap the error
 			return &query.Result{Errors: []string{err.Error()}}
 		}
-		vshardNum := partition.ShardFunc(hashedShardKey, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards))
-		vshard := partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards[vshardNum-1]
-
-		// TODO: replicas -- add args for slave etc.
-		datasourceInstance := vshard.DatastoreShard.Replicas.GetMaster().DatasourceInstance
-
-		// TODO: generate or store/read the name!
-		datasourceInstanceShardInstance, ok := datasourceInstance.ShardInstances[vshard.ID]
-		if !ok {
-			return &query.Result{Errors: []string{"2 Unknown datasourceInstanceShardInstance"}}
-		}
-
-		newQ := *q
-		newQ.Args.ShardInstance = datasourceInstanceShardInstance.Name
-		if result, err := Query(ctx, s.clientManager, datasourceInstance, &newQ); err == nil {
-			return result
-		} else {
-			return &query.Result{Errors: []string{err.Error()}}
-		}
+		keyspacePartitionAddr = &hashedShardKey
 
 	// TODO: what do we want to do for brand new things?
 	case query.Insert:
@@ -610,25 +595,7 @@ func (s *RouterNode) handleWrite(ctx context.Context, meta *metadata.Meta, q *qu
 			// TODO: wrap the error
 			return &query.Result{Errors: []string{err.Error()}}
 		}
-		vshardNum := partition.ShardFunc(hashedShardKey, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards))
-
-		vshard := partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards[vshardNum-1]
-
-		// TODO: replicas -- add args for slave etc.
-		datasourceInstance := vshard.DatastoreShard.Replicas.GetMaster().DatasourceInstance
-
-		datasourceInstanceShardInstance, ok := datasourceInstance.ShardInstances[vshard.ID]
-		if !ok {
-			return &query.Result{Errors: []string{"4 Unknown datasourceInstanceShardInstance"}}
-		}
-
-		newQ := *q
-		newQ.Args.ShardInstance = datasourceInstanceShardInstance.Name
-		if result, err := Query(ctx, s.clientManager, datasourceInstance, &newQ); err == nil {
-			return result
-		} else {
-			return &query.Result{Errors: []string{err.Error()}}
-		}
+		keyspacePartitionAddr = &hashedShardKey
 
 	case query.Update:
 		if q.Args.Filter == nil {
@@ -670,51 +637,8 @@ func (s *RouterNode) handleWrite(ctx context.Context, meta *metadata.Meta, q *qu
 				// TODO: wrap the error
 				return &query.Result{Errors: []string{err.Error()}}
 			}
-			vshardNum := partition.ShardFunc(hashedShardKey, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards))
+			keyspacePartitionAddr = &hashedShardKey
 
-			// TODO: replicas -- add args for slave etc.
-			vshard := partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards[vshardNum-1]
-			datasourceInstance := vshard.DatastoreShard.Replicas.GetMaster().DatasourceInstance
-
-			datasourceInstanceShardInstance, ok := datasourceInstance.ShardInstances[vshard.ID]
-			if !ok {
-				return &query.Result{Errors: []string{"5 Unknown datasourceInstanceShardInstance"}}
-			}
-
-			// TODO: replicas -- add args for slave etc.
-			newQ := *q
-			newQ.Args.ShardInstance = datasourceInstanceShardInstance.Name
-			if result, err := Query(ctx, s.clientManager, datasourceInstance, &newQ); err == nil {
-				return result
-			} else {
-				return &query.Result{Errors: []string{err.Error()}}
-			}
-
-		} else { // Otherwise we need to send this query to all shards to let them handle it
-			vshardResults := make(chan *query.Result, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards))
-
-			for _, vshard := range partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards {
-				datasourceInstance := vshard.DatastoreShard.Replicas.GetMaster().DatasourceInstance
-
-				datasourceInstanceShardInstance, ok := datasourceInstance.ShardInstances[vshard.ID]
-				if !ok {
-					vshardResults <- &query.Result{Errors: []string{"6 Unknown datasourceInstanceShardInstance"}}
-				} else {
-					go func(datasourceinstance *metadata.DatasourceInstance, datasourceInstanceShardInstance *metadata.DatasourceInstanceShardInstance) {
-						// TODO: replicas -- add args for slave etc.
-						newQ := *q
-						newQ.Args.ShardInstance = datasourceInstanceShardInstance.Name
-						if result, err := Query(ctx, s.clientManager, datasourceInstance, &newQ); err == nil {
-							vshardResults <- result
-						} else {
-							vshardResults <- &query.Result{Errors: []string{err.Error()}}
-						}
-					}(datasourceInstance, datasourceInstanceShardInstance)
-				}
-
-			}
-
-			return query.MergeResult(collection.PrimaryIndex.Fields, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards), vshardResults)
 		}
 
 	case query.Delete:
@@ -744,27 +668,58 @@ func (s *RouterNode) handleWrite(ctx context.Context, meta *metadata.Meta, q *qu
 			// TODO: wrap the error
 			return &query.Result{Errors: []string{err.Error()}}
 		}
-		vshardNum := partition.ShardFunc(hashedShardKey, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards))
+		keyspacePartitionAddr = &hashedShardKey
+	}
 
+	if keyspacePartitionAddr != nil {
+		partition := keyspace.GetKeyspacePartition(*keyspacePartitionAddr)
+		vshardNum := partition.ShardFunc(*keyspacePartitionAddr, len(partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards))
 		vshard := partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards[vshardNum-1]
 
 		// TODO: replicas -- add args for slave etc.
 		datasourceInstance := vshard.DatastoreShard.Replicas.GetMaster().DatasourceInstance
 
+		// TODO: generate or store/read the name!
 		datasourceInstanceShardInstance, ok := datasourceInstance.ShardInstances[vshard.ID]
 		if !ok {
-			return &query.Result{Errors: []string{"7 Unknown datasourceInstanceShardInstance"}}
+			return &query.Result{Errors: []string{"2 Unknown datasourceInstanceShardInstance"}}
 		}
-
 		newQ := *q
 		newQ.Args.ShardInstance = datasourceInstanceShardInstance.Name
-		// TODO: replicas -- add args for slave etc.
 		if result, err := Query(ctx, s.clientManager, datasourceInstance, &newQ); err == nil {
 			return result
 		} else {
 			return &query.Result{Errors: []string{err.Error()}}
 		}
+	} else {
+		var vshards []*metadata.DatastoreVShardInstance
+		for _, partition := range keyspace.Partitions {
+			vshards = append(vshards, partition.DatastoreVShards[databaseDatastore.Datastore.ID].Shards...)
+		}
+		vshardResults := make(chan *query.Result, len(vshards))
 
+		for _, vshard := range vshards {
+			datasourceInstance := vshard.DatastoreShard.Replicas.GetMaster().DatasourceInstance
+
+			datasourceInstanceShardInstance, ok := datasourceInstance.ShardInstances[vshard.ID]
+			if !ok {
+				vshardResults <- &query.Result{Errors: []string{"6 Unknown datasourceInstanceShardInstance"}}
+			} else {
+				go func(datasourceinstance *metadata.DatasourceInstance, datasourceInstanceShardInstance *metadata.DatasourceInstanceShardInstance) {
+					// TODO: replicas -- add args for slave etc.
+					newQ := *q
+					newQ.Args.ShardInstance = datasourceInstanceShardInstance.Name
+					if result, err := Query(ctx, s.clientManager, datasourceInstance, &newQ); err == nil {
+						vshardResults <- result
+					} else {
+						vshardResults <- &query.Result{Errors: []string{err.Error()}}
+					}
+				}(datasourceInstance, datasourceInstanceShardInstance)
+			}
+
+		}
+
+		return query.MergeResult(collection.PrimaryIndex.Fields, len(vshards), vshardResults)
 	}
 
 	return nil
