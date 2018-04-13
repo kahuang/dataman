@@ -2118,9 +2118,13 @@ func (m *MetadataStore) EnsureDoesntExistCollectionKeyspace(ctx context.Context,
 	}
 
 	// Delete children
-	if err := m.EnsureDoesntExistCollectionKeyspacePartition(ctx, dbname, collectionname); err != nil {
-		return err
-	}
+	if collection.Keyspaces != nil && len(collection.Keyspaces) > 0 {
+	    for _, partition := range collection.Keyspaces[0].Partitions {
+		    if err := m.EnsureDoesntExistCollectionKeyspacePartition(ctx, dbname, collectionname, partition.StartId); err != nil {
+			    return err
+		    }
+	    }
+    }
 
 	for _, collectionKeyspace := range collection.Keyspaces {
 		collectionKeyspaceShardKeyResult := m.Store.Filter(ctx, query.QueryArgs{
@@ -2281,7 +2285,7 @@ func (m *MetadataStore) EnsureExistsCollectionKeyspacePartition(ctx context.Cont
 }
 
 // TODO: change once we support more partitions
-func (m *MetadataStore) EnsureDoesntExistCollectionKeyspacePartition(ctx context.Context, dbname, collectionname string) error {
+func (m *MetadataStore) EnsureDoesntExistCollectionKeyspacePartition(ctx context.Context, dbname, collectionname string, startId uint64) error {
 	meta, err := m.GetMeta(ctx)
 	if err != nil {
 		return err
@@ -2299,6 +2303,9 @@ func (m *MetadataStore) EnsureDoesntExistCollectionKeyspacePartition(ctx context
 
 	for _, collectionKeyspace := range collection.Keyspaces {
 		for _, collectionKeyspacePartition := range collectionKeyspace.Partitions {
+			if collectionKeyspacePartition.StartId != startId {
+				continue
+			}
 			// Delete all links to datastores
 			collectionKeyspacePartitionDatastoreVShardResult := m.Store.Filter(ctx, query.QueryArgs{
 				DB:            "dataman_router",
